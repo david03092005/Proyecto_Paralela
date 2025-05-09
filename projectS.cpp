@@ -88,6 +88,7 @@ int main(int argc, char* argv[]) {
 
 void print_M(vector<vector<Entidad>> &M){
         int n = M.size();
+	int m = M[0].size();
         for (int i = 0; i < n; i++){
                 for (int j = 0; j < n; j++){
                         printf(" %d ", M[i][j].getTipoEntidad());
@@ -263,24 +264,29 @@ void movimientosConejos(int gen) {
 
 	vector<vector<Entidad>> nuevoMundo = mundo;
 	vector<Entidad> nuevosConejos;
-
+	
+	printf("MovConejos\n");
 	for (int i = 0; i < conejos.size(); i++) {
-        	Entidad conejo = conejos[i];
+		Entidad conejo = conejos[i];
         	int posX = conejo.getPosX();
         	int posY = conejo.getPosY();
         	vector<vector<int>> posiblesMov;
         	int cantPosibles = 0;
         	int movX, movY;
+		bool gano = true;	
 
-        	
-        	for (int mov = 0; mov < 4; mov++) {
+		for (int mov = 0; mov < 4; mov++) {
         		movX = movimientos[mov][0];
             		movY = movimientos[mov][1];
             		int nx = posX + movX;
             		int ny = posY + movY;
 
             		if (nx >= 0 && nx < R && ny >= 0 && ny < C) {
-                		int tipo = mundo[nx][ny].getTipoEntidad();
+                		if (nx < 0 || nx >= R || ny < 0 || ny >= C) {
+                                	cerr << "Entidad fuera de límites: " << nx << "," << ny << endl;
+                                	continue;
+                        	}
+				int tipo = mundo[nx][ny].getTipoEntidad();
                 		bool mov = mundo[nx][ny].getMovimiento();
 
                 		if (tipo == 0 || (tipo == 2 && mov == confirmacion)) {
@@ -311,26 +317,36 @@ void movimientosConejos(int gen) {
                     			nuevoMundo[destX][destY] = nuevoConejo;
                     			nuevosConejos.push_back(nuevoConejo);
                 		}
+				else{
+					gano = false;
+				}
             		}
 			else {
-                		Entidad nuevoConejo(conejo.getGenProcRabbits() + 1, 0, 0, 2, destX, destY, !conejo.getMovimiento());
+				Entidad nuevoConejo(conejo.getGenProcRabbits() + 1, 0, 0, 2, destX, destY, !conejo.getMovimiento());
                 		nuevoMundo[destX][destY] = nuevoConejo;
                 		nuevosConejos.push_back(nuevoConejo);
             		}
-
-              		if (conejo.getGenProcRabbits() == GEN_PROC_RABBITS) {
-                		Entidad hijo(0, 0, 0, 2, posX, posY, !conejo.getMovimiento());
+			if (conejo.getGenProcRabbits() == GEN_PROC_RABBITS) {
+				printf("AQUI SI LLEGO\n");
+				if (gano){
+					nuevosConejos[nuevosConejos.size() - 1].setGenProcRabbits(0);
+					nuevoMundo[destX][destY].setGenProcRabbits(0);
+				}
+				Entidad hijo(0, 0, 0, 2, posX, posY, !conejo.getMovimiento());
                 		nuevoMundo[posX][posY] = hijo;
                 		nuevosConejos.push_back(hijo);
-            		}
+            			printf("AQUI SI LLEGO2\n");
+			}
 			else {
-                		nuevoMundo[posX][posY] = Entidad();
-            		}
+				nuevoMundo[posX][posY] = Entidad();
+			}
         	} 
 		else {
+			printf("AQUI SI LLEGO3 %zu\n", nuevosConejos.size());
             		conejo.setMovimiento(conejo.getMovimiento());
             		nuevoMundo[posX][posY] = conejo;
             		nuevosConejos.push_back(conejo);
+			printf("AQUI SI LLEGO4\n");
         	}
 	}
 
@@ -344,9 +360,8 @@ void movimientosZorros(int gen){
     	vector<vector<int>> movimientos = {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
 	vector<vector<Entidad>> nuevoMundo = mundo;
     	vector<Entidad> nuevosZorros;
-	printf("%d\n", zorros[0].getTipoEntidad());
+	printf("MovZorros\n");
     	for (int i = 0; i < zorros.size(); i++) {
-		printf("Entroooooo");
 		Entidad zorro = zorros[i];
                 int posX = zorro.getPosX();
                 int posY = zorro.getPosY();
@@ -354,10 +369,9 @@ void movimientosZorros(int gen){
                 int cantPosibles = 0;
                 int movX, movY;
 		bool comerConejos = false;
+		bool gano = true;
 
-		if (zorro.getGenFoodFoxes() < gen){
-			
-
+		//if (zorro.getGenFoodFoxes() < GEN_FOOD_FOXES){
 			for (int mov = 0; mov < 4; mov++) {
 				movX = movimientos[mov][0];
                 	        movY = movimientos[mov][1];
@@ -368,7 +382,7 @@ void movimientosZorros(int gen){
 					int tipo = mundo[nx][ny].getTipoEntidad();
                        		        bool mov = mundo[nx][ny].getMovimiento();
 
-                                	if (tipo == 0 || (tipo == 3 && mov == confirmacion) && !comerConejos) {
+                                	if ((tipo == 0 || (tipo == 3 && mov == confirmacion)) && !comerConejos) {
                                 	        posiblesMov.push_back({movX, movY});
                                 	        cantPosibles++;
                                 	}
@@ -385,8 +399,12 @@ void movimientosZorros(int gen){
 					}
 				}
 			}
-			
-			if (cantPosibles > 0) {
+
+			if (zorro.getGenFoodFoxes() + 1 >= GEN_FOOD_FOXES && !comerConejos){
+				Entidad vacio(0, 0, 0, 0, posX, posY, false);
+                        	nuevoMundo[posX][posY] = vacio;
+			}
+			else if (cantPosibles > 0) {
                 	        int decision = (gen + posX + posY) % cantPosibles;
                 	        movX = posiblesMov[decision][0];
                        		movY = posiblesMov[decision][1];
@@ -401,7 +419,7 @@ void movimientosZorros(int gen){
                                 	        j++;
                                 	}
 
-                                	if (j < zorros.size() && zorro.getGenProcFoxes() > zorros[j].getGenProcFoxes()) {
+                                	if (j < zorros.size() && zorro.getGenProcFoxes() < zorros[j].getGenProcFoxes()) {
                                 	        Entidad nuevoZorro(0, zorro.getGenProcFoxes() + 1, zorro.getGenFoodFoxes() + 1, 3, destX, destY, !zorro.getMovimiento());
                                 	        nuevoMundo[destX][destY] = nuevoZorro;
                                 	        nuevosZorros.push_back(nuevoZorro);
@@ -411,8 +429,12 @@ void movimientosZorros(int gen){
                                 	        nuevoMundo[destX][destY] = nuevoZorro;
                                 	        nuevosZorros.push_back(nuevoZorro);
 					}
+					else {
+						gano = false;
+					}
                         	}
 				else {
+					int zorroFood = zorro.getGenFoodFoxes() + 1;
 					int tipo = mundo[destX][destY].getTipoEntidad();
 					if (tipo == 2){
 						int j = 0;
@@ -423,19 +445,36 @@ void movimientosZorros(int gen){
                                         		j++;
                                 		}
 						conejos.erase(conejos.begin() + j);
+						zorroFood = 0;
 					}
-
-					Entidad nuevoZorro(0, zorro.getGenProcFoxes() + 1, zorro.getGenFoodFoxes() + 1, 3, destX, destY, !zorro.getMovimiento());
+					Entidad nuevoZorro(0, zorro.getGenProcFoxes() + 1, zorroFood, 3, destX, destY, !zorro.getMovimiento());
 					nuevoMundo[destX][destY] = nuevoZorro;
                         	        nuevosZorros.push_back(nuevoZorro);
 				}
+				if (zorro.getGenProcFoxes() == GEN_PROC_FOXES) {
+					if (gano) {
+                                        	nuevosZorros[nuevosZorros.size() - 1].setGenProcFoxes(0);
+                                        	nuevoMundo[destX][destY].setGenProcFoxes(0);
+                                	}
+                			Entidad hijo(0, 0, 0, 3, posX, posY, !zorro.getMovimiento());
+                			nuevoMundo[posX][posY] = hijo;
+                			nuevosZorros.push_back(hijo);
+            			}
+				else {
+                			nuevoMundo[posX][posY] = Entidad();
+            			}
 
-		
 			}
-		}
-		else {
-			Entidad vacio(0, 0, 0, 0, posX, posY, false);
-		}
+			else{
+				nuevoMundo[posX][posY] = zorro;
+				nuevosZorros.push_back(zorros[i]);
+			}
+
+		//}
+		//else {
+		//	Entidad vacio(0, 0, 0, 0, posX, posY, false);
+		//	nuevoMundo[posX][posY] = vacio;
+		//}
 	}
 	mundo = nuevoMundo;
         zorros = nuevosZorros;
